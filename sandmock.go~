@@ -1,0 +1,59 @@
+package main
+
+import (
+	"fmt"
+	"io"
+	"os"
+	"sync"
+	"time"
+)
+
+type task struct {
+	name string
+	latency time.Duration
+	duration time.Duration
+}
+
+func delay(duration time.Duration) {
+	time.Sleep(duration * time.Second)
+}
+
+func (t task) run(wg *sync.WaitGroup, c io.Writer) {
+	defer wg.Done()
+	delay(t.latency)
+	fmt.Fprintf(c, "Begin %s\n", t.name)
+	delay(t.duration)
+	fmt.Fprintf(c, "Finished %s\n", t.name)
+}
+
+func main() {
+	tasks := []task{
+		{
+			name: "A",
+			latency: 2,
+			duration: 5,
+		},
+		{
+			name: "B",
+			latency: 1,
+			duration: 3,
+		},
+		{
+			name: "C",
+			latency: 0,
+			duration: 7,
+		},
+	}
+	var wg sync.WaitGroup
+	for i, t := range tasks {
+		wg.Add(1)
+		var c io.Writer
+		if i % 2 != 0 {
+			c = os.Stdout
+		} else {
+			c = os.Stderr
+		}
+		go t.run(&wg, c)
+	}
+	wg.Wait()
+}
